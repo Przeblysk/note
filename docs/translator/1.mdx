@@ -1,0 +1,106 @@
+---
+title: 现代网络浏览器概览-1 Inside look at modern web browser (part 1)
+author: Mariko Kosaka
+authorURL: https://developer.chrome.com/authors/kosamari/
+---
+
+# 现代网络浏览器概览-1
+
+## CPU、GPU、内存和多进程架构
+
+在这个由 4 篇组成的系列博客中，我们将从高级体系架构到渲染流水线的细节来深入了解 Chrome 浏览器。如果你想知道浏览器是如何把你的代码变成一个功能强大的网站的，或者你对为什么用某些特定技术来优化性能的一知半解，那么这个系列博客就是为你准备的。
+
+在第一部分的博客中，我们会来了解核心计算以及 chrome 的多进程架构。
+
+## 一台电脑的核心是 CPU 以及 GPU
+
+为了了解浏览器运行的环境，我们需要了解一些计算机部件及其功能。
+
+### CPU
+
+<img
+  width='200'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/Wx90M7DlxzVdXEeg5UhL.png?auto=format&w=1600'
+/>
+首先是中央处理器--或称 CPU。CPU可以被视为计算机的大脑。一个CPU核心，在图片中被描绘成一个办公室工作人员，可以一个接一个地处理许多不同的任务。它可以处理从数学到艺术的一切事情，同时还知道如何回复客户电话。在过去，大多数CPU都是单核的芯片。一个内核就像另一个住在同一芯片中的CPU。在现代硬件中，你通常拥有多个内核，从而为你的手机和笔记本电脑提供了更多的计算能力。
+
+### GPU
+
+<img
+  width='200'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/W6kFjvrwk1yDEhs8lFm1.png?auto=format&w=1600'
+/>
+
+图形处理单元-或 GPU 是计算机的另一个部分。与 CPU 不同，GPU 擅长处理简单的任务，但同时跨多个核心。顾名思义，它最初是为了处理图形而开发的。这就是为什么在图形环境中，“使用 GPU”或“由 GPU 支持”与快速渲染和流畅交互联系在一起。近年来，随着 GPU 加速计算，越来越多的复杂计算正在成为可能。
+当您在计算机或手机上启动应用程序时，驱动该应用程序的是 CPU 和 GPU。通常，应用程序使用操作系统这个媒介运行在 CPU 和 GPU 上。
+
+<div align='middle'>
+  <img
+    width='400'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/9M8aKlSl3207o9C3QVVp.png?auto=format&w=1600'
+  />
+</div>
+
+## 在进程和线程上执行程序
+
+<img
+  width='200'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/ICtmZ85CWgSJ7UZjomd1.png?auto=format&w=1600'
+/>
+
+首先在深入研究浏览器体系架构之前需要掌握的另一个概念是进程和线程。
+
+进程可以被描述为应用程序的执行程序。一个线程线程是驻留在进程内的，并执行其进程程序的任何部分。
+
+当你启动一个应用程序时，就会相对应的创建一个进程。应用程序可能会创建一些线程来帮助运行，但也不是绝对的。操作系统为进程提供了一块可使用的内存，所有应用程序状态都保存在该私有内存空间中。当您关闭应用程序时，该进程也会消失，操作系统会释放内存
+
+<div align='middle'>
+  <img
+    width='400'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/x5h2ZL6SWI1vF5jSa8YB.svg'
+  />
+</div>
+
+一个进程可以要求操作系统启动另一个进程来运行不同的任务。发生这种情况时，会为新进程分配不同的内存部分。如果两个进程需要通信，它们可以使用进程间通信(IPC)来实现。许多应用程序都是按照这种设计方式来运行的，这样如果某个工作进程没有响应，它可以自己单独得进行重新启动，并且不会影响到其他正在运行的进程。
+
+<div align='middle'>
+  <img
+    width='400'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/OdFbLc2ufRmkJoHinTUL.svg'
+  />
+</div>
+
+## 浏览器架构
+
+那么，如何使用进程和线程构建 web 浏览器呢？好吧，它可能是一个有许多不同线程的进程，或者是许多有几个线程的不同进程通过 IPC 进行通信。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/BG4tvT7y95iPAelkeadP.png?auto=format&w=1600'
+  />
+</div>
+
+这里需要注意的是，这些不同的架构是实施细节。对于如何建立一个网络浏览器，并没有标准的规范。一个浏览器的方法可能与另一个完全不同。
+
+在本系列博客中，我们将使用下图中描述的 Chrome 的最新架构。
+
+在图片顶部的是浏览器进程，它负责协调应用程序不同部分的进程进行。对于渲染器进程，我们可以看到创建了多个进程，并分配给每个标签。直到最近，Chrome 在可能的情况下给每个标签一个进程；现在它试图给每个网站提供自己的进程，包括 iframe（详情见网站隔离）。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/JvSL0B5q1DmZAKgRHj42.png?auto=format&w=1600'
+  />
+</div>
+
+## 每种进程都在负责点什么呢？
+
+下表介绍了每个 Chrome 进程及其控制的内容：
+
+| 表头   |        |
+| ------ | ------ |
+| 单元格 | 单元格 |
