@@ -4,7 +4,10 @@ const getSidebar = () => ({
   '/note': [
     {
       text: '随记随笔',
-      items: [{ text: '简介', link: '/note/home' }],
+      items: [
+        { text: '简介', link: '/note/home' },
+        { text: '在 Taro 中使用 Lottie', link: '/note/taro-lottie' },
+      ],
     },
     {
       text: '博文翻译',
