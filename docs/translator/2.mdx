@@ -1,0 +1,115 @@
+---
+title: 现代网络浏览器概览-2 Inside look at modern web browser (part 2)
+author: Mariko Kosaka
+authorURL: https://developer.chrome.com/authors/kosamari/
+---
+
+# 现代网络浏览器概览-2
+
+## 导航发生了什么
+
+这是一个由 4 部分组成的博客系列的第二部分，介绍了 Chrome 的内部工作原理。在上一篇文章中，我们研究了不同的进程和线程如何处理浏览器的不同部分。在这篇文章中，我们将更深入地挖掘每个进程和线程为了显示一个网站是如何进行通信的。
+
+让我们来看一个简单的 Web 浏览例子：您在浏览器中输入一个 URL，然后浏览器从互联网获取数据并显示一个页面。在这篇文章中，我们将重点关注用户请求站点和浏览器准备呈现页面的部分--也称为导航。
+
+## 它从一个浏览器进程开始
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/lo3x7Zt4LZ4ltsQQjLns.png?auto=format&w=1600'
+/>
+
+正如我们在第 1 部分：[CPU、GPU、内存和多进程架构中所述](/translator/1)，标签页之外的所有内容都由浏览器进程处理。浏览器进程具有多个线程，如绘制浏览器按钮和输入域的 UI 线程、处理网络堆栈以从互联网接收数据的 Network 线程、控制对文件的访问的存储线程等等。当您在地址栏中键入 URL 时，您的输入将由浏览器进程中的 UI 线程处理。
+
+## 一次简单的导航
+
+### 步骤 1：处理输入
+
+当用户开始在地址栏中输入内容时，UI 线程首先询问的是 “这是搜索查询还是 URL？“。在 Chrome 中，地址栏也是一个搜索输入域，因此 UI 线程需要解析并决定是将您跳转到搜索引擎，还是跳转到您请求的站点。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/HDAB6c70Jo2IvsUl0giY.png?auto=format&w=1600'
+  />
+</div>
+
+### 步骤 2：开始导航
+
+当用户按 Enter 时，UI 线程启动网络调用以获取站点内容。loading 图标会显示在标签页的一角，Network 线程通过适当的协议，如 DNS 查找并且为请求建立 TLS 连接。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/nSD7ognQ9hNFoFOnFQlw.png?auto=format&w=1600'
+  />
+</div>
+
+此时，Network 线程可以接收类似于 HTTP 301 的服务器重定向报头。在这种情况下，Network 线程与服务器正在请求重定向的 UI 线程进行通信。然后，将发起另一个 URL 请求。
+
+### 步骤 3：读取响应
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/PTmbGdEyTDdLDrAbJw4v.png?auto=format&w=1440'
+/>
+
+一旦响应体(有效负载)开始进入，Network 线程将在必要时查看流的前几个字节。响应的 Content-Type 标头应该说明它是什么类型的数据，但由于它可能丢失或错误，因此这里会执行 [MIME 类型](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Basics_of_HTTP/MIME_types)嗅探。正如[源代码](https://source.chromium.org/chromium/chromium/src/+/main:net/base/mime_sniffer.cc;l=5)中所说，这是一项“棘手的业务”。您可以阅读评论以了解不同的浏览器如何处理 content-type/payload 对。
+
+如果响应是一个 HTML 文件，那么下一步将是将数据传递给渲染器进程，但是如果它是一个压缩文件或其他文件，那么这意味着它是一个下载请求，所以他们需要将数据传递给下载管理器。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/pn0zlnxoYgbyzFVKoTc9.png?auto=format&w=1600'
+  />
+</div>
+
+这也是进行安全浏览检查的地方。如果域和响应数据似乎与已知的恶意站点匹配，则 Network 线程会发出警报以显示警告页面。
+
+此外，还会执行 [Cross Origin Read Blocking (CORB)](https://www.chromium.org/Home/chromium-security/corb-for-developers/) 检查，以确保敏感的跨站点数据不会进入渲染器进程。
+
+### 步骤 4：查找渲染器进程
+
+一旦所有检查完成并且 Network 线程确信浏览器应该导航到请求的站点，Network 线程就会告诉 UI 线程数据已经准备好了。然后，UI 线程找到一个渲染器进程来进行网页的呈现。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/VAR3s7k8rIgTrfwEWMIo.png?auto=format&w=1600'
+  />
+</div>
+
+由于网络请求可能需要数百毫秒才能返回响应，因此应用了加速此过程的优化。当 UI 线程在步骤 2 向 Network 线程发送 URL 请求时，它已经知道它们正在导航到哪个站点。UI 线程尝试与网络请求并行地主动查找或启动渲染器进程。这样，如果一切按预期进行，则当 Network 线程接收数据时，渲染器进程已经处于待命状态。如果导航重定向跨站点，则可能不会使用此备用进程，在这种情况下，可能需要不同的进程。
+
+### 步骤 5：提交导航
+
+既然数据和渲染器进程已经准备好，就可以将 IPC 从浏览器进程发送到渲染器进程以提交导航。它还传递数据流，以便渲染器进程可以继续接收 HTML 数据。一旦浏览器进程在渲染器进程中听到提交的确认，导航就完成了，然后就开始了文档加载阶段。
+
+此时，地址栏被更新，安全指示器和站点设置 UI 展示新页面的站点信息。该标签页的会话历史记录将被更新，因此后退/前进按钮将遍历刚刚导航到的站点。为便于在关闭标签页或窗口时恢复标签页/会话，会话历史记录存储在磁盘上。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/kL6CLP7fLay9L99vRR3F.png?auto=format&w=1600'
+  />
+</div>
+
+### 额外步骤：初始加载完成
+
+提交导航后，渲染器进程将继续加载资源并渲染页面。我们将在下一篇文章中详细介绍这一阶段发生的事情。一旦渲染器进程“完成”渲染，它就会将 IPC 发送回浏览器进程(这是在页面中的所有帧上触发了所有 onLoad 事件并完成执行之后)。此时，UI 线程停止标签页左上角的 loading 图标。
+
+我之所以说“完成”，是因为在这之后，客户端的 JavaScript 仍然可以加载额外的资源并渲染新的视图。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/DwMkwQndYadDqnMtp8T3.png?auto=format&w=1600'
+  />
+</div>
+
+未完待续....
+
+**原文链接 [inside-browser-part2](https://developer.chrome.com/blog/inside-browser-part2)**

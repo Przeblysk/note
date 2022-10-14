@@ -8,7 +8,10 @@ const getSidebar = () => ({
     },
     {
       text: '博文翻译',
-      items: [{ text: '现代网络浏览器概览-1', link: '/translator/1' }],
+      items: [
+        { text: '现代网络浏览器概览-1', link: '/translator/1' },
+        { text: '现代网络浏览器概览-2', link: '/translator/2' },
+      ],
     },
   ],
 })
