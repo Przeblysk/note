@@ -1,43 +1,44 @@
 import { defineConfig } from 'islandjs'
 
-const getSidebar = () => ({
-  '/note': [
-    {
-      text: '随记随笔',
-      items: [
-        { text: '简介', link: '/note/home' },
-        { text: '在 Taro 中使用 Lottie', link: '/note/taro-lottie' },
-      ],
-    },
-    {
-      text: '博文翻译',
-      items: [
-        { text: '现代网络浏览器概览-1', link: '/translator/1' },
-        { text: '现代网络浏览器概览-2', link: '/translator/2' },
-      ],
-    },
-  ],
-})
+function getSidebar() {
+  return {
+    '/note': [
+      {
+        text: '随记随笔',
+        items: [
+          { text: '简介', link: '/note/home' },
+          { text: '在 Taro 中使用 Lottie', link: '/note/taro-lottie' },
+        ],
+      },
+      {
+        text: '博文翻译',
+        items: [
+          { text: '现代网络浏览器概览-1', link: '/translator/1' },
+          { text: '现代网络浏览器概览-2', link: '/translator/2' },
+        ],
+      },
+    ],
+  }
+}
 
-const getNav = () => [
-  {
-    text: '首页',
-    link: '/',
-    activeMatch: '^/$|^/',
-  },
-]
+function getNav() {
+  return [
+    {
+      text: '首页',
+      link: '/',
+      activeMatch: '^/$|^/',
+    },
+  ]
+}
 
 export default defineConfig({
   title: "Przeblysk's Note",
   icon: '/OSLO.png',
   themeConfig: {
-    lang: 'zh',
     locales: {
-      '/zh/': {
-        lang: 'zh',
+      '/': {
+        lang: 'zh-CN',
         label: '简体中文',
-        selectText: '语言',
-        ariaLabel: '语言',
         lastUpdatedText: '上次更新',
         title: "Przeblysk's Note",
         outlineTitle: '目录',
