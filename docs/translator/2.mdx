@@ -110,6 +110,72 @@ authorURL: https://developer.chrome.com/authors/kosamari/
   />
 </div>
 
-未完待续....
+## 导航到其他站点
+
+简单的导航这样就完成了！但是，如果用户再次将不同的 URL 放到地址栏中会发生什么呢？当然，浏览器进程要经过相同的步骤才能导航到不同的站点。但在它可以这样做之前，它需要检查当前渲染的站点是否关心[bepreunLoad](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/beforeunload_event)事件。
+
+`beforeunload` 可以创建“离开这个网站吗？”这样一个警告弹窗，当您尝试离开或关闭选项卡时。标签页中的所有内容，包括您的 JavaScript 代码，都是由渲染器进程处理的，所以当新的导航请求进入时，浏览器进程必须检查当前的渲染器进程。
+
+:::warning
+不要添加无条件的`beforeunload`处理程序。它会造成更多的延迟，因为在启动导航之前需要执行处理程序。只有在需要时才应添加此事件处理程序，例如，如果需要警告用户可能会丢失在页面上输入的数据，则应添加此处理程序。
+:::
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/u7EEPH9S2PpycpbQQRFk.png?auto=format&w=1600'
+  />
+</div>
+
+如果导航是从渲染器进程启动的(比如用户点击了一个链接，或者客户端运行了 window.Location=“https://newsite.com”))，那么渲染器进程会在处理程序之前进行`beforeunload`检查。然后，它经历与浏览器进程启动导航相同的过程。唯一的区别是导航请求从渲染器进程发送到浏览器进程。
+
+当新导航到与当前渲染的站点不同的站点时，将调用单独的渲染进程来处理新导航，同时保留当前渲染进程以处理诸如`unload`之类的事件。有关更多信息，请参阅[页面生命周期状态概述](https://developers.google.com/web/updates/2018/07/page-lifecycle-api#overview_of_page_lifecycle_states_and_events)以及如何使用[页面生命周期 API](https://developer.chrome.com/blog/page-lifecycle-api/)与事件挂钩。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/5tThsmZamrpxFydJFePg.png?auto=format&w=1600'
+  />
+</div>
+
+## 如果是 Service Worker
+
+这一导航流程最近的一个变化是引入了[Service Worker](https://developer.chrome.com/docs/workbox/service-worker-overview/)。Service Worker 是一种在您的应用程序代码中编写网络代理的方法；允许 Web 开发人员更多地控制本地缓存的内容以及何时从网络获取新数据。如果 Service Worker 设置为从缓存加载页面，则不需要从网络请求数据。
+
+需要特别注意的是，Service Worker 是在渲染器进程中运行的 JavaScript 代码。但是，当导航请求进入时，浏览器进程如何知道站点有 Service Worker 呢？
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/x65o4xjohKMgf5QDEWPG.png?auto=format&w=1600'
+/>
+
+注册 Service Worker 后，将保留 Service Worker 的范围作为参考(您可以在这篇[Service Worker 生命周期](https://developers.google.com/web/fundamentals/primers/service-workers/lifecycle)文章中阅读有关范围的更多信息)。
+
+当导航发生时，网络线程根据注册的 Service Worker 作用域来检查域，如果 Service Worker 注册了该 URL，则 UI 线程找到一个渲染器进程以执行 Service Worker 代码。Service Worker 可以从高速缓存加载数据，从而消除不必要的网络请求，或者它可以从网络请求新的资源。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/fuk5vjgLg4sZZTLAMCEB.png?auto=format&w=1600'
+  />
+</div>
+
+## 导航预加载
+
+您可以看到，如果 Service Worker 最终决定从网络请求数据，浏览器进程和渲染器进程之间的这种往返可能会导致延迟。[导航预加载](https://web.dev/navigation-preload/)是一种通过在服务工作者启动时并行加载资源来加速此过程的机制。它用 header 标记这些请求，允许服务器决定为这些请求发送不同的内容；例如，只发送更新的数据，而不是完整的文档。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/xAESXRJNybpxPK5dL3m7.png?auto=format&w=1600'
+  />
+</div>
+
+## 总结
+
+在这篇文章中，我们研究了导航过程中发生的事情，以及您的 Web 应用程序代码(如响应头和客户端 JavaScript)如何与浏览器交互。了解浏览器从网络获取数据所经历的步骤，可以更容易地理解为什么要开发导航预加载等 API。在下一篇文章中，我们将深入探讨浏览器如何评估我们的 HTML/CSS/JavaScript 以渲染页面。
+
+你喜欢这个帖子吗？如果你对未来的帖子有任何问题或建议，我很乐意在下面的评论区或 Twitter 上的[@kosamari](https://twitter.com/kosamari)上听到你的意见。
 
 **原文链接 [inside-browser-part2](https://developer.chrome.com/blog/inside-browser-part2)**
