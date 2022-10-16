@@ -25,13 +25,13 @@ npm install lottie-miniprogram
 
 ## 在页面中使用
 
-#### 引入 lottie
+### 引入 lottie
 
 首先我么需要在页面中引入我们的 Lottie 库
 
 `import lottie from 'lottie-miniprogram'`
 
-#### 创建 canvas 容器
+### 创建 canvas 容器
 
 目前小程序只支持以 canvas 的方式去渲染 Lottie，所以我们需要初始化一个 canvas 容器给 Lottie 使用。
 
@@ -51,7 +51,7 @@ npm install lottie-miniprogram
 
 我们定义了一个`type`为 2d、`id` 为 canvas 的 canvas。这个容器之后会给 Lottie 使用。
 
-#### 初始化 Lottie
+### 初始化 Lottie
 
 现在我们已经有了一个 Canvas 容器，接下来我们需要在页面中初始化 Lottie，具体的代码如下：
 
@@ -112,7 +112,7 @@ interface LoadAnimationParameter {
 
 接下来我们又马上调用了 Lottie 的一个方法 `goToAndStop` ，从字面上就很好理解，这个方法就是将动画暂停在我们设置的那个时间点。它接受了 2 个参数，第一个参数是要停止的位置，第二个参数是第一个参数的单位是否是帧。因为我们的 Lottie 动画其实是帧动画，所以这个帧应该也不难理解。
 
-#### Lottie 中的方法
+### Lottie 中的方法
 
 ```typescript
 interface LoadAnimationReturnType {
@@ -156,6 +156,6 @@ interface LoadAnimationReturnType {
 10. destroy 销毁实例
 11. getDuration 获取时长
 
-#### 为所欲为
+### 为所欲为
 
 初始化完 Lottie 后，我们就可以使用 Lottie 中的方法对 Lottie 动画为所欲为啦。
