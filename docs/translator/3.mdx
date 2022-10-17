@@ -1,0 +1,248 @@
+---
+title: 现代网络浏览器概览-3 Inside look at modern web browser (part 3)
+author: Mariko Kosaka
+authorURL: https://developer.chrome.com/authors/kosamari/
+---
+
+# 现代网络浏览器概览-3
+
+## 渲染器进程的内部工作方式
+
+这是由 4 篇文章组成的关于介绍浏览器的工作原理的系列博客的第三部分。在此之前，我们介绍了多进程架构和导航流。在这篇文章中，我们将看看渲染器进程内部发生了什么。
+
+渲染器过程涉及到 Web 性能的许多方面。由于在渲染器进程中发生了很多事情，所以这篇文章只是一个概述。如果您想更深入地研究，[the Performance section of Web Fundamentals](https://developers.google.com/web/fundamentals/performance/why-performance-matters/)有更多的资源。
+
+## 渲染器进程处理 Web 内容
+
+渲染器进程负责标签页内发生的所有事情。在渲染器进程中，主线程处理您发送给用户的大部分代码。如果您使用 Web Worker 或服务 Worker，则有时会由 worker 线程来处理部分 JavaScript。合成器（compositor）和栅格（raster）线程也在渲染器进程内运行，以高效和流畅地渲染页面。
+
+渲染器进程的核心工作是将 HTML、CSS 和 JavaScript 转换为用户可以与之交互的网页。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/uIqf0QQZxF6mHPDWFEjz.png?auto=format&w=1600'
+  />
+</div>
+
+## 解析
+
+### DOM 的构建
+
+当渲染器进程接收到导航的提交消息并开始接收 HTML 数据时，主线程开始解析文本字符串(HTML)并将其转换为文档对象模型(DOM)。
+
+DOM 是浏览器对页面以及数据结构和 API 的内部表示，web 开发人员可以通过 JavaScript 与之交互。
+
+将 HTML 文档解析为 DOM 是由[HTML 标准](https://html.spec.whatwg.org/)定义的。您可能已经注意到，将 HTML 提供给浏览器永远不会抛出错误。例如，缺少结束`</p>`标记是有效的 HTML。像`Hi！<b>I‘m</b>Chrome</b>！</i>`(b 标记在 I 标记之前关闭)这样的错误标记被视为您编写了`Hi！<b>I’m Chrome</b>！</i>`。这是因为 HTML 规范的设计就是为了妥善地处理这些错误。如果您对这些事情是如何完成的很感兴趣，可以阅读 HTML 规范的[“错误处理简介和解析器中的奇怪情况”](https://html.spec.whatwg.org/multipage/parsing.html#an-introduction-to-error-handling-and-strange-cases-in-the-parser)一节。
+
+### 子资源加载
+
+网站通常使用图像、CSS 和 JavaScript 等外部资源。这些文件需要从网络或缓存加载。在解析构建 DOM 时，主线程可以逐个请求它们，但为了加快速度，“preload scanner”是并行的。如果 HTML 文档中有类似`<img>`或`<link>`的内容，那么 preload scanner 会查看 HTML 解析器生成的标记，并在浏览器进程中将请求发送给网络线程。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/qmuN5aduuEit6SZfwVOi.png?auto=format&w=1600'
+  />
+</div>
+
+### JavaScript 可以阻止解析
+
+当 HTML 解析器找到`<script>`标记时，它会暂停对 HTML 文档的解析，并且必须加载、解析和执行 JavaScript 代码。为什么呢？因为 JavaScript 可以使用像`document.write()`这样的 API 来修改文档，这样就会导致整个文档的结构可能发生改变（[HTML 规范中解析模型](https://html.spec.whatwg.org/multipage/parsing.html#overview-of-the-parsing-model)的概述有一个很棒的流程图）。这就是为什么 HTML 解析器必须等待 JavaScript 运行后才能继续解析 HTML 文档的原因。如果您对 JavaScript 执行中发生的事情感到好奇，你可以看看 [V8 团队就此进行的讨论和发表的博客文章](https://mathiasbynens.be/notes/shapes-ics)。
+
+## 提示浏览器如何加载资源
+
+web 开发人员可以通过多种方式向浏览器发送提示，以便很好地加载资源。如果你的 JavaScript 代码中不使用`document.write()`此类的 API，可以将 [async](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/script#attr-async) 或 [defer](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/script#attr-defer) 属性添加到`<script>`标签。这样浏览器就会异步加载和运行 JavaScript 代码，并且不会阻止解析。如果合适的话，您也可以使用[JavaScript 模块](https://v8.dev/features/modules)。`<link rel=“preload”>`是一种通知浏览器当前导航肯定需要该资源，并且希望提前加载该资源。您可以在[Resource Prioritization–Getting the Browser to Help You](https://web.dev/fast/#prioritize-resources)上阅读更多关于此的信息。
+
+## 样式计算
+
+拥有 DOM 还不能完整的渲染页面，因为我们可以在 CSS 中设置页面元素的样式。主线程解析 CSS 并确定每个 DOM 节点的计算样式。这是基于 CSS 选择器对每个元素应用何种样式的信息。您可以在 DevTools 的计算部分看到此信息。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/hGqtsAuYpEYX4emJd5Jw.png?auto=format&w=1600'
+  />
+</div>
+
+即使您没有提供任何 CSS，每个 DOM 节点都有一个计算样式。`<h1>`标签的显示大于`<h2>`标签，并且为每个元素定义了边距。这是因为浏览器具有默认样式表。如果你想知道 Chrome 的默认 CSS 是什么样的，[你可以在这里看到源代码](https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/html/resources/html.css)。
+
+## 布局
+
+现在，渲染器进程知道文档的结构和每个节点的样式，但这还不足以渲染页面。想象一下，你正试图通过电话向朋友描述一幅画。“有一个大的红色圆圈和一个小的蓝色正方形”并不能让你的朋友知道这幅画到底是什么样子。
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/GbgUOpTYR0nZBX1YUEDl.png?auto=format&w=1600'
+/>
+
+布局是查找元素几何图形的过程。主线程会遍历 DOM 和计算的样式，并创建布局树，其中包含 x y 坐标和边界框大小等信息。布局树的结构可能与 DOM 树相似，但它只包含页面上可见内容相关的信息。如果使用了`display:none`，则该元素不会在布局树中存在（但是，使用`visibility:hidden`的元素是存在的）。类似地，如果伪类的内容类似于`p::before{content:“Hi！”}`时，它将包含在布局树中，即使它不在 DOM 中。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/0JqiVwHxNab2YL6qWHbS.png?auto=format&w=1600'
+  />
+</div>
+
+确定页面的布局是一项具有挑战性的任务。即使是最简单的页面布局，比如从上到下的块流，也必须考虑字体有多大以及在哪里换行，因为这些都会影响段落的大小和形状，这样就会影响下一段的位置。
+
+<video controls loop autoplay muted playsinline>
+  <source
+    src='https://storage.googleapis.com/web-dev-uploads/video/T4FyVKpzu4WKF1kBNvXepbi08t52/rXSCtc21M00XrRqcw56C.mp4'
+    type='video/mp4'
+  />
+</video>
+
+CSS 可以使元素浮动到一侧，屏蔽溢出内容，并更改写入方向。你可以想象，这个布局阶段是一项艰巨的任务。在 Chrome 中，有一整个工程师团队为此负责。 如果你想了解他们工作的细节，可以看看这个很有趣的演讲[few talks from BlinkOn Conference](https://www.youtube.com/watch?v=Y5Xa4H2wtVA)。
+
+## 绘制
+
+拥有 DOM、样式和布局仍然不足以渲染页面。假设你正在尝试复制一幅画。你知道元素的大小、形状和位置，但你仍然需要判断绘制顺序。
+
+例如，可能会为某些元素设置`z-index`，在这种情况下，按 HTML 中写入的元素的顺序绘制将导致错误的渲染。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/4x9etJ64cg0x4a6Ktt5T.png?auto=format&w=1600'
+  />
+</div>
+
+在此绘制步骤中，主线程将遍历布局树以创建绘制记录。绘制记录是绘制过程的注释，如“先背景，然后文本，然后矩形”。如果您尝试过使用 JavaScript 在`<canvas>`元素上绘制过，那么您可能熟悉这个过程。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/zs8wNimWDPhu7NIhJDcc.png?auto=format&w=1600'
+  />
+</div>
+
+### 更新渲染流程的成本是很高的
+
+在渲染流程中要掌握的最重要的一点是，在每个步骤中，都会使用前一个操作的结果来创建新数据。例如，如果布局树中发生更改，则需要为文档的受影响部分重新生成绘制顺序。
+
+<video controls loop autoplay muted playsinline>
+  <source
+    src='https://storage.googleapis.com/web-dev-uploads/video/T4FyVKpzu4WKF1kBNvXepbi08t52/d7zOpwpNIXIoVnoZCtI9.mp4'
+    type='video/mp4'
+  />
+</video>
+
+如果要为元素设置动画，浏览器必须在每一帧之间运行这些操作。我们的大多数显示器每秒刷新屏幕 60 次（60 fps）；当你在屏幕上的每一帧移动元素时，动画对人眼来说都是平滑。但是，如果动画错过了中间的帧，那么这个动画就会卡。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/b3nyw5eLlDIM7rl9bxFC.png?auto=format&w=1600'
+  />
+</div>
+
+即使渲染操作与屏幕刷新保持同步，这些计算仍在主线程上运行，这意味着当应用程序运行 JavaScript 时可能会被阻塞。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/FryonpF90Ei9JYYGi1UI.png?auto=format&w=1600'
+  />
+</div>
+
+您可以将 JavaScript 操作分成小块，并使用`requestAnimationFrame`计划在每一帧运行。有关此主题的更多信息，请参阅[Optimize JavaScript Execution](https://web.dev/optimize-javascript-execution/)。您也可以在 [Web Workers 中运行 JavaScript](https://www.youtube.com/watch?v=X57mh8tKkgE) 以避免阻塞主线程。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/ypzLFiu34WCuhNHm7F0B.png?auto=format&w=1600'
+  />
+</div>
+
+## 合成
+
+### 你会怎么画页面？
+
+既然浏览器知道了文档的结构、每个元素的样式、页面的几何图形和绘制顺序，那么它如何绘制页面呢？将这些信息转换为屏幕上的像素称为光栅化。
+
+<video controls loop autoplay muted playsinline>
+  <source
+    src='https://storage.googleapis.com/web-dev-uploads/video/T4FyVKpzu4WKF1kBNvXepbi08t52/AiIny83Lk4rTzsM8bxSn.mp4'
+    type='video/mp4'
+  />
+</video>
+
+处理这一问题的一种简单方法可能是在视口中光栅化部分。如果用户滚动页面，则移动光栅框，并通过光栅填充缺少的部分。这就是 Chrome 首次发布时处理光栅化的方式。然而，现代浏览器运行一个更复杂的过程，称为合成。
+
+### 什么是合成
+
+合成是一种技术，可以将页面的各个部分分隔成层，分别将其栅格化，并在称为合成器线程的单独线程中合成为页面。如果发生滚动，因为层已经栅格化，它所要做的就是合成一个新帧。动画可以通过移动层和合成新帧以相同的方式实现。
+
+<video controls loop autoplay muted playsinline>
+  <source
+    src='https://storage.googleapis.com/web-dev-uploads/video/T4FyVKpzu4WKF1kBNvXepbi08t52/Aggd8YLFPckZrBjEj74H.mp4'
+    type='video/mp4'
+  />
+</video>
+
+您可以使用[Layers panel](https://blog.logrocket.com/eliminate-content-repaints-with-the-new-layers-panel-in-chrome-e2c306d4d752/?gi=cd6271834cea)面板在 DevTools 中查看您的网站如何划分为层。
+
+### 划分为层
+
+为了找出哪些元素需要位于哪些层中，主线程遍历布局树以创建层树（此部分在 DevTools 性能面板中称为“更新层树”）。如果页面中应该是独立层的某些部分（如侧菜单中的幻灯片）没有得到，那么可以使用 CSS 中的 will-change 属性向浏览器提示。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/V667Geh9MtTviJjDkGZq.png?auto=format&w=1600'
+  />
+</div>
+
+您可能会尝试为每个元素赋予层，但如果跨过多的层进行合成，则操作可能会比每帧光栅化页面的小部分慢，因此测量应用程序的渲染性能至关重要。有关该主题的详细信息，请查看[ Stick to Compositor-Only Properties and Manage Layer Count](https://web.dev/stick-to-compositor-only-properties-and-manage-layer-count/)
+
+### 主线上的栅格和合成
+
+创建图层树并确定绘制顺序后，主线程将该信息提交给合成器线程。然后，合成器线程栅格化每一层。一个层可能很大，就像整个页面的长度一样，所以合成器线程会将它们分割成切片，并将每个切片发送到栅格线程。栅格线程将每一块栅格化并将其存储在 GPU 内存中。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/SL4KO5UsGgBNLrOwb0wC.png?auto=format&w=1600'
+  />
+</div>
+
+合成器线程可以区分不同的栅格线程的优先级，以便可以首先栅格显示视区(或附近)内的内容。一个层还为不同的分辨率提供了多个平铺，以处理放大等操作。
+
+栅格切片后，合成器线程将收集称为绘制四边形的平铺信息，以创建合成器框架。
+
+<table>
+  <tr>
+    <td>绘制四边形</td>
+    <td>
+      包含诸如平铺在内存中的位置以及在考虑到页面合成的情况下绘制该平铺的位置之类的信息。
+    </td>
+  </tr>
+  <tr>
+    <td>合成器框架</td>
+    <td>表示页面框架的绘制四边形的集合。</td>
+  </tr>
+</table>
+
+然后，通过 IPC 将合成器帧提交给浏览器进程。此时，可以从 UI 线程添加另一个合成器帧以更改浏览器 UI，或从其他渲染器进程添加扩展。这些合成器帧被发送到 GPU 以在屏幕上显示。如果出现滚动事件，合成器线程将创建另一个要发送到 GPU 的合成器帧。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/tG4AzFeS3IdfTSawnFL6.png?auto=format&w=1600'
+  />
+</div>
+
+合成的好处是不涉及主线程。合成器线程不需要等待样式计算或 JavaScript 执行。这就是为什么仅合成动画被认为是平滑性能最佳的原因。如果需要再次计算布局或绘制，则必须涉及主线程。
+
+## 总结
+
+在本文中，我们研究了从解析到合成的渲染过程。希望您现在能够阅读更多关于网站性能优化的内容。
+
+在本系列的下一篇也是最后一篇文章中，我们将更详细地查看合成器线程，并了解当用户触发（如鼠标移动和点击）进入时会发生什么。
+
+你喜欢这个帖子吗？如果你对未来的帖子有任何问题或建议，我很乐意在下面的评论区或 Twitter 上的[@kosamari](https://twitter.com/kosamari)上听到你的意见。
+
+**原文链接 [inside-browser-part2](https://developer.chrome.com/blog/inside-browser-part3)**
