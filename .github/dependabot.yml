@@ -1,0 +1,12 @@
+# Set update schedule for GitHub Actions
+
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      # Check for npm updates on Sundays
+      day: 'sunday'
+      timezone: 'Asia/Shanghai'
+      time: '09:00'
