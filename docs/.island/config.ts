@@ -16,6 +16,7 @@ function getSidebar() {
           { text: '现代网络浏览器概览-1', link: '/translator/1' },
           { text: '现代网络浏览器概览-2', link: '/translator/2' },
           { text: '现代网络浏览器概览-3', link: '/translator/3' },
+          { text: '现代网络浏览器概览-4', link: '/translator/4' },
         ],
       },
     ],

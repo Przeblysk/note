@@ -1,0 +1,198 @@
+---
+title: 现代网络浏览器概览-4 Inside look at modern web browser (part 4)
+author: Mariko Kosaka
+authorURL: https://developer.chrome.com/authors/kosamari/
+---
+
+# 现代网络浏览器概览-4
+
+## 到达合成线程的输入
+
+这是由 4 篇文章组成的关于介绍浏览器的工作原理的系列博客的第四部分。在上一篇文章中，我们探讨了一下浏览器渲染页面的过程以及学习了一些关于合成线程的知识，在本篇文章中，我们要看一下当用户在网页上输入内容的时候，合成线程（compositor）做了些什么来保证流畅的用户体验的。
+
+## 从浏览器的角度来看输入事件
+
+当你听到“输入事件”（input events）的时候，你可能只会想到用户在文本框中输入内容或者对页面进行了点击操作，可是从浏览器的角度来看的话，其实来自于用户的任何手势动作（gesture）都是“输入事件”。用户滚动页面是一个“输入事件”，触碰屏幕以及移动鼠标也属于“输入事件”。
+
+当用户做了一些诸如触碰屏幕的手势动作时，浏览器进程（browser process）是第一个可以接收到这个事件的地方。可是浏览器进程只能知道用户的手势动作发生在什么地方而不知道如何处理，这是因为标签页内的内容是由页面的渲染进程（render process）负责的。因此浏览器进程会将事件的类型（如 `touchstart`）以及坐标（coordinates）发送给渲染进程。为了可以正确地处理这个事件，渲染进程会找到事件的目标对象（target）然后运行这个事件绑定的监听函数（listener）。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/ahDODQbpiTZX6lauff5T.png?auto=format&w=1600'
+  />
+</div>
+
+## 合成线程接收到输入事件
+
+<video controls loop autoplay muted playsinline>
+  <source
+    src='https://storage.googleapis.com/web-dev-uploads/video/T4FyVKpzu4WKF1kBNvXepbi08t52/Aggd8YLFPckZrBjEj74H.mp4'
+    type='video/mp4'
+  />
+</video>
+
+在上一篇文章中，我们查看了合成线程是如何通过合并页面已经光栅化好的层来保障流畅滚动体验（scroll smoothly）的。如果当前页面不存在任何用户事件的监听器（event listener），合成线程完全不需要主线程的参与就能创建一个新的合成帧来响应事件。可是如果页面有一些事件监听器（event listeners）呢？合成线程是如何判断出这个事件是否需要路由给主线程处理的呢？
+
+## 了解非快速滚动区域 - non-fast scrollable region
+
+因为页面的 JavaScript 脚本是在主线程（main thread）中运行的，所以当一个页面被合成的时候，合成线程会将页面那些注册了事件监听器的区域标记为“非快速滚动区域”（Non-fast Scrollable Region）。由于知道了这些信息，当用户事件发生在这些区域时，合成线程会将输入事件发送给主线程来处理。如果输入事件不是发生在非快速滚动区域，合成线程就无须主线程的参与来合成一个新的帧。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/F2nDPjKxnlXxuG1SAUnt.png?auto=format&w=1600'
+  />
+</div>
+
+### 当你写事件监听器的时候要注意的事项
+
+Web 开发的一个常见的模式是事件委托（event delegation）。由于事件会冒泡，你可以给顶层的元素绑定一个事件监听函数来作为其所有子元素的事件委托者，这样子节点的事件就可以统一被顶层的元素处理了。因此你可能看过或者写过类似于下面的代码：
+
+```javascript
+document.body.addEventListener('touchstart', (event) => {
+  if (event.target === area) {
+    event.preventDefault()
+  }
+})
+```
+
+只用一个事件监听器就可以服务到所有的元素，乍一看这种写法还是挺实惠的。可是，如果你从浏览器的角度去看一下这段代码，你会发现上面给 body 元素绑定了事件监听器后其实是将整个页面都标记为一个非快速滚动区域，这就意味着即使你页面的某些区域压根就不在乎是不是有用户输入，当用户输入事件发生时，合成线程每次都会告知主线程并且会等待主线程处理完它才干活。因此这种情况下合成线程就丧失提供流畅用户体验的能力了（smooth scrolling ability）。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/X46tkweWpcsUIKzfAtuh.png?auto=format&w=1600'
+  />
+</div>
+
+为了减轻这种情况的发生，您可以为事件监听器传递 passive：true 选项。 这个选项会告诉浏览器您仍要在主线程中侦听事件，可是合成线程也可以继续合成新的帧。
+
+```javascript
+document.body.addEventListener(
+  'touchstart',
+  (event) => {
+    if (event.target === area) {
+      event.preventDefault()
+    }
+  },
+  { passive: true }
+)
+```
+
+## 检查事件是否可取消
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/Y3cPoWi9S1uczLToDxcx.png?auto=format&w=800'
+/>
+
+假设页面中有一个框，您希望将滚动方向限制为仅水平滚动。
+
+在指针事件中使用 passive:true 选项。意味着页面滚动可以是平滑的，但是当你想用`preventDefault`来限制滚动方向时，垂直滚动可能已经开始。你可以通过使用 event.cancelable 方法来检查这一点
+
+```javascript
+document.body.addEventListener(
+  'pointermove',
+  (event) => {
+    if (event.cancelable) {
+      event.preventDefault() // block the native scroll
+      /*
+       *  do what you want the application to do here
+       */
+    }
+  },
+  { passive: true }
+)
+```
+
+或者，您也可以使用像`touch-action`这样的 CSS 规则来完全消除事件处理程序。
+
+```css
+#area {
+  touch-action: pan-x;
+}
+```
+
+## 查找事件的目标对象（event target）
+
+<img
+  width='300'
+  align='right'
+  src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/6dN5zsCK46dMNqwkO7EG.png?auto=format&w=1600'
+/>
+
+当合成线程向主线程发送输入事件时，主线程要做的第一件事是通过命中测试（hit test）去找到事件的目标对象（target）。具体的命中测试流程是遍历在渲染流水线中生成的绘画记录（paint records）来找到输入事件出现的 x, y 坐标上面描绘的对象是哪个。
+
+## 最小化发送给主线程的事件数
+
+上一篇文章中我们有说过显示器的刷新频率通常是一秒钟 60 次以及我们可以通过让 JavaScript 代码的执行频率和屏幕刷新频率保持一致来实现页面的平滑动画效果（smooth animation）。对于用户输入来说，触摸屏一般一秒钟会触发 60 到 120 次点击事件，而鼠标一般则会每秒触发 100 次事件，因此输入事件的触发频率其实远远高于我们屏幕的刷新频率。
+
+如果每秒将诸如 `touchmove` 这种连续被触发的事件发送到主线程 120 次，因为屏幕的刷新速度相对来说比较慢，它可能会触发过量的点击测试以及 JavaScript 代码的执行。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/1cyHbX3uaB0CCSCuX8vJ.png?auto=format&w=1600'
+  />
+</div>
+
+为了最大程度地减少对主线程的过多调用，Chrome 会合并连续事件（例如 `wheel` ，`mousewheel`，`mousemove`，`pointermove`，`touchmove`），并将调度延迟到下一个`requestAnimationFrame`之前。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/XRCMvR1Us631HNEg8g62.png?auto=format&w=1600'
+  />
+</div>
+
+任何诸如`keydown`，`keyup`，`mouseup`，`mousedown`，`touchstart`和`touchend`等相对不怎么频繁发生的事件都会被立即派送给主线程。
+
+## 使用 getCoalesecedEvents 来获取帧内（intra-frame）事件
+
+对于大多数 web 应用来说，合并事件应该已经足够用来提供很好的用户体验了，然而，如果你正在构建的是一个根据用户的`touchmove`坐标来进行绘图的应用的话，合并事件可能会使页面画的线不够顺畅和连续。在这种情况下，你可以使用鼠标事件的`getCoalescedEvents`来获取被合成的事件的详细信息。
+
+<div align='middle'>
+  <img
+    width='600'
+    src='https://wd.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/P0kK5GGwmOEBXd3TjLDq.png?auto=format&w=1600'
+  />
+</div>
+
+```javascript
+window.addEventListener('pointermove', (event) => {
+  const events = event.getCoalescedEvents()
+  for (let event of events) {
+    const x = event.pageX
+    const y = event.pageY
+    // draw a line using x and y coordinates.
+  }
+})
+```
+
+## 下一步
+
+这本系列的文章中，我们以 Chrome 浏览器为例子探讨了浏览器的内部工作原理。如果你之前从来没有想过为什么 DevTools 推荐你在事件监听器中使用`passive:true`选项或者在`script`标签中写`async`属性的话，我希望这个系列的文章可以给你一些关于浏览器为什么需要这些信息来提供更快更流畅的用户体验的原因。
+
+### 使用 Lighthouse
+
+如果你想让你的代码对浏览器友好，但不知道从哪里开始，[Lighthouse](https://developers.google.com/web/tools/lighthouse/)是一个工具，它可以对任何网站进行审计，并为你提供一份报告，说明哪些是正确的，哪些是需要改进的。阅读审核列表还可以让你了解浏览器关心的是什么。
+
+### 学习如何衡量性能
+
+不同网站的性能调整可能会有所不同，你要自己衡量自己网站的性能并确定最适合提升你的网站性能的方案。 你可以查看 Chrome DevTools 团队的一些教程来学习如何才能衡量自己网站的性能。
+
+### 为你的站点添加 Feature Policy
+
+如果你想更进一步，你可以了解一下[Feature Policy](https://developer.chrome.com/blog/feature-policy/)这个新的 Web 平台功能，这个功能可以在你构建项目的时候提供一些保护让您的应用程序具有某些行为并防止你犯下错误。例如，如果你想确保你的应用代码不会阻塞页面的解析（parsing），你可以在同步脚本策略（synchronius scripts policy）中运行你的应用。具体做法是将 `sync-script` 设置为`'none'`，这样那些会阻塞页面解析的 JavaScript 代码会被禁止执行。这样做的好处是避免你的代码阻塞页面的解析，而且浏览器无须担心解析器（parser）暂停。
+
+## 总结
+
+以上就是所有和浏览器架构和运行原理相关的内容了，我们以后在开发 web 应用的时候，不应该只考虑代码的优雅性，还要多多从浏览器是如何解析运行我们的代码的方面进行思考，从而为用户提供更好的用户体验。
+
+非常感谢所有审阅本系列早期草稿的人，包括（但不限于）：[Alex Russell](https://twitter.com/slightlylate), [Paul Irish](https://twitter.com/paul_irish), [Meggin Kearney](https://twitter.com/MegginKearney), [Eric Bidelman](https://twitter.com/ebidel), [Mathias Bynens](https://twitter.com/mathias), [Addy Osmani](https://twitter.com/addyosmani), [Kinuko Yasuda](https://twitter.com/kinu), [Nasko Oskov](https://twitter.com/nasko), and Charlie Reis。
+
+你喜欢这个帖子吗？如果你对未来的帖子有任何问题或建议，我很乐意在下面的评论区或 Twitter 上的[@kosamari](https://twitter.com/kosamari)上听到你的意见。
+
+**原文链接 [inside-browser-part2](https://developer.chrome.com/blog/inside-browser-part4/)**
