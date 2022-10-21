@@ -8,6 +8,10 @@ function getSidebar() {
         items: [
           { text: '简介', link: '/note/home' },
           { text: '在 Taro 中使用 Lottie', link: '/note/taro-lottie' },
+          {
+            text: '微信小程序 fixed 定位在 scrollview 中失效',
+            link: '/note/wx-miniprogram-scroll-view-fixed',
+          },
         ],
       },
       {

@@ -1,0 +1,108 @@
+# 微信小程序 fixed 定位在 scrollview 中失效
+
+## 少说废话先上东西
+
+[小程序片段代码导入](https://developers.weixin.qq.com/s/EDliYbmo7qDI)
+
+在这段代码片段中创建了一个高度为`300rpx`的`scroll-view`容器。并且在容器中有一个`fixed`定位的内容如下所示。
+
+```css
+.fixed-center {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+<div align='middle'>
+  <img width='200' src='https://s2.loli.net/2022/10/21/veSgh7Jkc3fELTx.jpg' />
+</div>
+
+上面这张截图是在开发者工具中展示的样子。`scroll-view` 正常滚动，`fixed`定位的内容在屏幕的正中间，这符合我们的预期。
+
+<div align='middle'>
+  <img width='200' src='https://s2.loli.net/2022/10/22/JapBRP5txIeAjNw.jpg' />
+</div>
+
+但是当我们用真机去预览的时候发现原本应该`fixed`在中间的内容不展示了。**_WTF!!!_**
+
+## 为什么？？？
+
+### -webkit-overflow-scrolling: touch
+
+没错万恶之源就是这个`css`属性：`-webkit-overflow-scrolling: touch` [MDN 介绍](https://developer.mozilla.org/en-US/docs/Web/CSS/-webkit-overflow-scrolling)。
+
+没想到吧 MDN 警告不要在生产环境使用，但是微信小程序就是加了这个属性在`scroll-view`上。那就让我们来找找这个属性。
+
+1. 调试微信开发者工具
+
+<div align='middle'>
+  <img width='400' src='https://s2.loli.net/2022/10/22/iXBaHbL8ZRUTWnY.jpg' />
+</div>
+
+2. 找到模拟器对应的 webview
+
+<div align='middle'>
+  <img width='100%' src='https://s2.loli.net/2022/10/22/DpYXigdeZVP4LIO.jpg' />
+</div>
+
+3. 调试 webview
+
+通过在 devtool 中输入以下代码，来打开对应 webview 的 devtool
+
+:::tip
+你的 webview 可能不是下标为 [1] 哦～
+:::
+
+```javascript
+document.getElementsByTagName('webview')[1].showDevTools(true)
+```
+
+<div align='middle'>
+  <img width='100%' src='https://s2.loli.net/2022/10/22/DpYXigdeZVP4LIO.jpg' />
+</div>
+
+4. 审查元素
+
+<div align='middle'>
+  <img width='100%' src='https://s2.loli.net/2022/10/22/375tZqmLsfcdBNi.jpg' />
+</div>
+
+```css
+.wx-scroll-view {
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
+  max-height: inherit;
+  position: relative;
+  width: 100%;
+}
+```
+
+我们会找到上面这样的一段 css 样式。
+
+### 这个属性影响了什么？
+
+[小程序官方说明](https://developers.weixin.qq.com/community/develop/doc/0000667484c96844b83ac9c7651809)
+
+网上说 Safari 对于`overflow-scrolling`用了原生控件来实现。对于有`-webkit-overflow-scrolling`的网页，会创建一个 UIScrollView，提供子 layer 给渲染模块使用。
+
+## 解决方案
+
+1. 把 fixed 元素放到 scroll-view 外面
+
+2. 覆盖-webkit-overflow-scrolling: touch， 把值改成 auto
+
+3. 弃用 scroll-view，使用 view 配合 overflow-y: auto 来达成滚动效果
+
+第 2 点覆盖 css 代码如下
+
+```css
+.wx-scroll-view {
+  -webkit-overflow-scrolling: auto;
+}
+```
+
+## 结尾
+
+2022，是时候告别-webkit-overflow-scrolling 了，因为在 iOS 13 之后，不需要再设置-webkit-overflow-scrolling:touch 了，所有可滚动的框架，或者设置 overﬂow 滚动的元素默认都是弹性效果了。也不知道小程序什么时候会去掉\:P。
