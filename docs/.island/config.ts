@@ -7,11 +7,13 @@ function getSidebar() {
         text: '随记随笔',
         items: [
           { text: '简介', link: '/note/home' },
-          { text: '在 Taro 中使用 Lottie', link: '/note/taro-lottie' },
-          {
-            text: '微信小程序 fixed 定位在 scrollview 中失效',
-            link: '/note/wx-miniprogram-scroll-view-fixed',
-          },
+        ],
+      },
+      {
+        text: '小程序',
+        items: [
+          { text: '在 Taro 中使用 Lottie', link: '/mini-program/taro-lottie' },
+          { text: '微信小程序 fixed 定位在 scrollview 中失效', link: '/mini-program/wx-miniprogram-scroll-view-fixed' },
         ],
       },
       {
