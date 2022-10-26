@@ -1,0 +1,72 @@
+# 在代码中分离职责
+
+每次接到一个需求时，最先考虑的问题就是如何实现。可能有的同学一把梭一个文件直接干完，可能有的同学会拆分组件。
+
+对于老司机来说肯定是喜欢拆分组件的，那么问题来了怎么拆分呢？
+
+我打算用下面的例子来和同志们探讨下，例子是使用 [React-hooks](https://reactjs.org/docs/hooks-intro.html) 实现的，但是这个并不影响你使用其他的技术。**重点不是哪种技术，而是怎么拆分的思考**。
+
+首先我先定义了三层职责分别是：
+
+- 视图组件-只是用来定义 html、css 等主要的功能是表现和展示
+- 业务逻辑-由业务定义的需求逻辑（比如数据的排序、计算、步骤等）
+- 实现逻辑-保证视图组件和业务逻辑能链接起来的中间层（一般是使用框架来完成）
+
+## 需求
+
+一个可以加减的数量编辑器，并且有最大和最小值的要求。
+
+例如下面这个组件
+
+<iframe
+  src='https://codesandbox.io/embed/separation-responsibilities-lmr81u?fontsize=14&hidenavigation=1&theme=dark'
+  style={{
+    width: '100%',
+    height: '500px',
+    borderRadius: '4px',
+    overflow: 'hidden',
+  }}
+  title='separation-responsibilities'
+  allow='accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking'
+  sandbox='allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts'
+></iframe>
+
+## 直接干他丫的
+
+```jsx
+const NumberSelect = () => {
+  const [value, setValue] = useState(0)
+  const [message, setMessage = useState('')
+
+  const onClickMinus = () => {
+    if(value > 0) {
+      setValue(value -1)
+      setMessage('')
+    }else {
+      setMessage('不能再减小啦～')
+    }
+  }
+
+  const onClickPlus = () => {
+    if(value< 10) {
+      setValue(value +1)
+      setMessage('')
+    }else {
+      setMessage('已经最多了噢～')
+    }
+  }
+
+  return (
+    <div className="quantity-selector">
+      <button onClick={onClickMinus} className="button">
+        -
+      </button>
+      <div className="number">{value}</div>
+      <button onClick={onClickPlus} className="button">
+        +
+      </button>
+      <div className="message">{message}</div>
+    </div>
+  );
+}
+```

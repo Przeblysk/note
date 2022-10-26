@@ -8,6 +8,10 @@ function getSidebar() {
         items: [
           { text: '简介', link: '/note/home' },
           { text: 'git', link: '/note/git' },
+          {
+            text: '在代码中分离职责',
+            link: '/note/separating-responsibilities',
+          },
         ],
       },
       {
