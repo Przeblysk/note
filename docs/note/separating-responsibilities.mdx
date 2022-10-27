@@ -70,3 +70,136 @@ const NumberSelect = () => {
   );
 }
 ```
+
+我们大部分的第一直觉就是向上面这样编写代码。但是这样写的组件存在一个问题。那就是没有分离职责，对于一个小组件来说可能没有什么问题，但是如果这个组件不断扩展，可能因为新的功能需要添加更多的逻辑。那么很快这个组件就会变得臃肿不好维护。
+
+## 改造
+
+首先，我们把这个组件分为两个部分：
+
+1. 我们创建一个单独的文件用来创建我们的自定义 hook
+
+```javascript
+const useNumberSelect = () => {
+  const [value, setValue] = useState(0)
+  const [message, setMessage] = useState('')
+
+  const onClickMinus = () => {
+    if (value > 0) {
+      setValue(value - 1)
+      setMessage('')
+    } else {
+      setMessage('不能再减小啦～')
+    }
+  }
+
+  const onClickPlus = () => {
+    if (value < 10) {
+      setValue(value + 1)
+      setMessage('')
+    } else {
+      setMessage('已经最多了噢～')
+    }
+  }
+
+  return {
+    value,
+    message,
+    onClickMinus,
+    onClickPlus,
+  }
+}
+```
+
+在这个自定义 hook 中我们返回了 2 个状态值，以及操作这两个状态值的业务函数。
+
+2. 在组件中导入使用
+
+```jsx
+const NumberSelect = () => {
+  const { value, message, onClickMinus, onClickPlus } = useNumberSelect()
+
+  return (
+    <div className='quantity-selector'>
+      <button onClick={onClickMinus} className='button'>
+        -
+      </button>
+      <div className='number'>{value}</div>
+      <button onClick={onClickPlus} className='button'>
+        +
+      </button>
+      <div className='message'>{message}</div>
+    </div>
+  )
+}
+```
+
+现在这个组件看上去还可以了，因为他内部没有业务逻辑，只是负责展示。
+
+但并不是说这样就可以了，我们还可以把业务逻辑和实现逻辑进行分离，还记得开头定义的三层职责吧:)
+
+因为这个组件并不复杂，所以我把业务逻辑以及实现逻辑放在了一个文件内展示，如果逻辑复杂可以把这两层职责放在各自的文件中实现。
+
+```javascript
+import { useState } from 'react'
+
+// 业务逻辑 干净、可测试的函数
+const increase = (prevValue, max) => {
+  return {
+    value: prevValue < max ? prevValue + 1 : prevValue,
+    message: prevValue < max ? '' : '已经最多了噢～',
+  }
+}
+
+const decrease = (prevValue, min) => {
+  return {
+    value: prevValue > min ? prevValue - 1 : prevValue,
+    message: prevValue > min ? '' : '不能再减小啦～',
+  }
+}
+
+// 实现/框架逻辑。在这里封装state和effect
+const useNumberSelect = () => {
+  const [state, setState] = useState({
+    value: 0,
+    message: '',
+  })
+  const onClickPlus = () => {
+    setState(increase(state.value, 10))
+  }
+  const onClickMinus = () => {
+    setState(decrease(state.value, 0))
+  }
+  return { onClickPlus, onClickMinus, state }
+}
+
+export default useNumberSelect
+```
+
+代码的上半部分是两个业务逻辑的纯函数。它们只用来负责计算`value`和设置`message`。如果把请求、dom 操作等其他和业务逻辑无关的杂项与业务逻辑分离后，测试、重构和维护业务逻辑会变得很容易。
+
+代码的下半部分是实现逻辑。这段代码就和框架比较相关了，使用框架的 api 来实现状态的存储和操作。其实就是一个 React hook 的封装。
+
+### 你可以在 react hook 里做的事情
+
+- 封装状态的变更
+- 在 useEffect 函数（如果是类组件的情况下，则为 componentDidMount）中实现副作用（如 dom 操作、网络请求等）
+- 其他框架相关工作
+
+### 数据处理
+
+当从自定义 hook 获取封装完的状态后，我们可能需要对数据进行进一步的处理，比如说过滤、排序等。这些操作应该放在自定义 hook 外。因为这些操作可以是一个或者多个纯函数的组合来完成，这样也更好维护和测试。
+
+### 添加更多的功能
+
+如果你想给组件添加更多的功能，比如说加入到购物车。你可以使用相同的原则来创建一个新的 hook，比如 `useAddToCart`。不要把新的业务逻辑添加到现有的自定义 hook 中。而是应该创建新的，如果需要使用其中的某些值，那就应该把参数传给新的自定义 hook，始终保持单一职责的思想。
+
+- 通过这样的分离，排查问题时，找到问题的来源会容易得多。因为我们现在有了质量更好、更干净的代码。
+- 你可以在其他组件中重用自定义 hook 和业务逻辑。
+- 你可以将 UI 组件与一组具有自己的业务逻辑的其他自定义 hook 组合
+- 如果框架通过新更新引入了重大更改，这样的应用应该更容易修改
+- 如果你决定切换到 Vue 或 Angular，你可以将业务逻辑移动到另一个框架，因为我们的业务逻辑现在是和框架无关的
+
+将代码分离为业务和实现逻辑可以在各种应用程序中实践，例如后端或游戏开发，并且与框架无关。
+
+上面只是一个很小的组件示例，但如果是一个业务很复杂的大组件，很明显按照上面的方法进行拆分的组件会比所有东西都写在一起的要更好。
