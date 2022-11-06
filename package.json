@@ -5,6 +5,6 @@
     "preview": "island start docs"
   },
   "dependencies": {
-    "islandjs": "^0.5.1"
+    "islandjs": "^0.6.4"
   }
 }
