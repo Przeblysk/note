@@ -12,6 +12,10 @@ function getSidebar() {
             text: '在代码中分离职责',
             link: '/note/separating-responsibilities',
           },
+          {
+            text: 'changesets',
+            link: '/note/changesets',
+          },
         ],
       },
       {
