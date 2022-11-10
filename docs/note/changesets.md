@@ -12,7 +12,7 @@ Monorepo 项目离不开的就是版本和发布更新日志的管理。不知�
 
 ## Changesets 怎么做的？
 
-生成的 changelog 遵循 [语义化版本 2.0.0]([语义化版本 2.0.0 | Semantic Versioning (semver.org)](https://semver.org/lang/zh-CN/)) ，具体的做法是先根据你的代码更改生成 changeset 文件，然后发版的时候合并这些 changeset 文件、更改版本号、生成 changelog。
+生成的 changelog 遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/) ，具体的做法是先根据你的代码更改生成 changeset 文件，然后发版的时候合并这些 changeset 文件、更改版本号、生成 changelog。
 
 
 
@@ -33,7 +33,7 @@ npx changeset init
 
 初始化完成后项目的根目录会有一个.changeset的文件夹，里面的config.json就是changeset的配置文件，如下：
 
-```
+```json
 {
   "$schema": "https://unpkg.com/@changesets/config@2.2.0/schema.json",
   "changelog": "@changesets/cli/changelog",
@@ -47,7 +47,7 @@ npx changeset init
 }
 ```
 
-我们可以关注下其中的 **changelog** 和 **access** 。changelog 可以修改为我们安装的 `@changesets/changelog-github` ，access 的默认值为 `restricted` ，可以修改为 `public`。更多的配置信息说明可以看[官方文档]([changesets/config-file-options.md at main · changesets/changesets (github.com)](https://github.com/changesets/changesets/blob/main/docs/config-file-options.md))。
+我们可以关注下其中的 **changelog** 和 **access** 。changelog 可以修改为我们安装的 `@changesets/changelog-github` ，access 的默认值为 `restricted` ，可以修改为 `public`。更多的配置信息说明可以看[changesets/config-file-options.md at main · changesets/changesets (github.com)](https://github.com/changesets/changesets/blob/main/docs/config-file-options.md)。
 
 ### 生成 chanegset
 
@@ -71,3 +71,4 @@ npx changeset init
 2. `npx changeset publish`
 
 接着我们就可以用命令发布我们的packagse了
+
