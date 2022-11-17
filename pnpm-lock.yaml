@@ -1,10 +1,10 @@
 lockfileVersion: 5.4
 
 specifiers:
-  islandjs: ^0.6.4
+  islandjs: ^0.7.6
 
 dependencies:
-  islandjs: 0.6.5
+  islandjs: 0.7.6
 
 packages:
 
@@ -384,23 +384,23 @@ packages:
       - supports-color
     dev: false
 
-  /@islandjs/plugin-backtop/0.6.5_islandjs@0.6.5:
-    resolution: {integrity: sha512-VmwbA6t39E9pooV8cikoPsot1wSjwZEeBoI8PhktlqJvl0n9ADFWLeni0RivMMjTlVi9EWkUT70srdzQsPcYVA==}
+  /@islandjs/plugin-backtop/0.7.6_islandjs@0.7.6:
+    resolution: {integrity: sha512-a/EZc93MTOJXDcJpq3/UDf/TU2OFJZQPxMkq4iXzQbanH71iH+6689cx6hlklDN4fGNraqx+5HaOPKy8wRG3TA==}
     peerDependencies:
-      islandjs: '*'
+      islandjs: 0.7.6
     dependencies:
       b-tween: 0.3.3
-      islandjs: 0.6.5
+      islandjs: 0.7.6
       lodash-es: 4.17.21
     dev: false
 
-  /@islandjs/plugin-search/0.6.5_islandjs@0.6.5:
-    resolution: {integrity: sha512-gziOAyoRue2Pj06BgxbLDbRE7xWImi2j8ul7oCxEXoyFiZ4T/HlLB0tvjCSX8dZ66RgSP9PI74GG3mExeo4rpA==}
+  /@islandjs/plugin-search/0.7.6_islandjs@0.7.6:
+    resolution: {integrity: sha512-ISQ2YiZS91AI/loHZrHgL3ZO7bfUf5Vj0fAL+9mNs5vFPvhhBna2+lsX7a/ypyzOX7mLqseTSCCQAdM+7L80qA==}
     peerDependencies:
-      islandjs: '*'
+      islandjs: 0.7.6
     dependencies:
       flexsearch: 0.6.32
-      islandjs: 0.6.5
+      islandjs: 0.7.6
       lodash-es: 4.17.21
     dev: false
 
@@ -734,6 +734,12 @@ packages:
     resolution: {integrity: sha512-JCB8C6SnDoQf0cNycqd/35A7MjcnK+ZTqE7judS6o7utxUCg6imJg3QK2qzHKszlTjcj2cn+NwMB2i96ubpj7w==}
     dev: false
 
+  /@types/react-transition-group/4.4.5:
+    resolution: {integrity: sha512-juKD/eiSM3/xZYzjuzH6ZwpP+/lejltmiS3QEzV/vmb/Q8+HfDmxu+Baga8UEMGBqV88Nbg4l2hY/K2DkyaLLA==}
+    dependencies:
+      '@types/react': 18.0.22
+    dev: false
+
   /@types/react/18.0.22:
     resolution: {integrity: sha512-4yWc5PyCkZN8ke8K9rQHkTXxHIWHxLzzW6RI1kXVoepkD3vULpKzC2sDtAMKn78h92BRYuzf+7b/ms7ajE6hFw==}
     dependencies:
@@ -997,6 +1003,10 @@ packages:
       buffer: 6.0.3
       inherits: 2.0.4
       readable-stream: 3.6.0
+    dev: false
+
+  /body-scroll-lock/4.0.0-beta.0:
+    resolution: {integrity: sha512-a7tP5+0Mw3YlUJcGAKUqIBkYYGlYxk2fnCasq/FUph1hadxlTRjF+gAcZksxANnaMnALjxEddmSi/H3OR8ugcQ==}
     dev: false
 
   /braces/3.0.2:
@@ -1263,6 +1273,13 @@ packages:
   /diff/5.1.0:
     resolution: {integrity: sha512-D+mk+qE8VC/PAUrlAU34N+VfXev0ghe5ywmpqrawphmVZc1bEfn56uo9qpyGp1p4xpzOHkSW4ztBd6L7Xx4ACw==}
     engines: {node: '>=0.3.1'}
+    dev: false
+
+  /dom-helpers/5.2.1:
+    resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
+    dependencies:
+      '@babel/runtime': 7.19.4
+      csstype: 3.1.1
     dev: false
 
   /duplexer/0.1.2:
@@ -2161,26 +2178,28 @@ packages:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
     dev: false
 
-  /islandjs/0.6.5:
-    resolution: {integrity: sha512-YWb6lVkETEIuw1KA0IR6uoR44L/y93qkyMQAW4OjeAl2CQj5Urw/RPFUmujvXcZDViIjo1diAtb7Bv/GaNCXIg==}
+  /islandjs/0.7.6:
+    resolution: {integrity: sha512-RtgLexwwyb/TEMt6fAOrJ+h/gKR+i2kmTCngjq9Z+DU8TjCNXtFNtqsilaV0n7B+cA9NMrqiK9CC8X8dKTCRVg==}
     hasBin: true
     dependencies:
       '@babel/core': 7.19.6
       '@babel/helper-plugin-utils': 7.19.0
       '@babel/preset-react': 7.18.6_@babel+core@7.19.6
       '@iconify-json/carbon': 1.1.9
-      '@islandjs/plugin-backtop': 0.6.5_islandjs@0.6.5
-      '@islandjs/plugin-search': 0.6.5_islandjs@0.6.5
+      '@islandjs/plugin-backtop': 0.7.6_islandjs@0.7.6
+      '@islandjs/plugin-search': 0.7.6_islandjs@0.7.6
       '@mdx-js/mdx': 2.1.5
       '@mdx-js/react': 2.1.5_react@18.2.0
       '@mdx-js/rollup': 2.1.5
       '@svgr/core': 6.3.1
+      '@types/react-transition-group': 4.4.5
       '@unocss/preset-attributify': 0.45.30
       '@unocss/preset-icons': 0.45.30
       '@unocss/preset-wind': 0.45.30
       '@unocss/vite': 0.45.30_vite@3.1.8
       '@vitejs/plugin-react': 2.0.1_vite@3.1.8
       acorn: 8.8.1
+      body-scroll-lock: 4.0.0-beta.0
       cac: 6.7.12
       chokidar: 3.5.3
       compression: 1.7.4
@@ -2203,6 +2222,7 @@ packages:
       react-dom: 18.2.0_react@18.2.0
       react-helmet-async: 1.3.0_biqbaboplfbrettd7655fr4n2y
       react-router-dom: 6.4.2_biqbaboplfbrettd7655fr4n2y
+      react-transition-group: 4.4.5_biqbaboplfbrettd7655fr4n2y
       rehype-autolink-headings: 6.1.1
       rehype-external-links: 2.0.1
       rehype-highlight: 5.0.2
@@ -3202,6 +3222,20 @@ packages:
     dependencies:
       '@remix-run/router': 1.0.2
       react: 18.2.0
+    dev: false
+
+  /react-transition-group/4.4.5_biqbaboplfbrettd7655fr4n2y:
+    resolution: {integrity: sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g==}
+    peerDependencies:
+      react: '>=16.6.0'
+      react-dom: '>=16.6.0'
+    dependencies:
+      '@babel/runtime': 7.19.4
+      dom-helpers: 5.2.1
+      loose-envify: 1.4.0
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
     dev: false
 
   /react/18.2.0:
